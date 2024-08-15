@@ -4,7 +4,7 @@ import time
 from tkinter import Tk
 from config import cfg
 from dataModel import BITMAP, HITI_JOB_PROPERTY_RT
-from utility import  get_bmp_from_image, get_ribbon_name
+from utility import  get_HITI_DS_name, get_bmp_from_image, get_ribbon_name
 
 
 dll_path=cfg['DLL_PATH']
@@ -43,8 +43,8 @@ dll.HITI_PrintOnePageW.argtypes = [ctypes.c_wchar_p,
 def HITI_CheckPrinterStatus(printer_name):
     # 调用函数
     result = dll.HITI_CheckPrinterStatusW(printer_name, ctypes.byref(status))
-    
-    print(f"Printer {printer_name} status: 0x{status.value:08X}")
+    status_name=get_HITI_DS_name(status.value)
+    print(f"Printer {printer_name} status: {status_name}")
     
 
 def HITI_ApplyJobSetting(printer_name,JobProp):
@@ -95,7 +95,20 @@ def HITI_DoCommand(printer_name, command):
         return False
     
 
-def DoPrintJob(printer_name,image_path,_dwPaperType=0,_dwPrintMode=0,_shOrientation=1,_shCopies=1,_hwnd=0,_dwApplyMatte=0):
+def DoPrintJob(printer_name,image_path,_dwPaperType,_dwPrintMode,_shOrientation,_shCopies=1,_dwApplyMatte=0):
+    """
+    打印一张图片
+    Args:
+        printer_name: 打印机名称
+        image_path: 图片路径
+        _dwPaperType: 纸张类型 见HITI_PAPER_TYPE
+        _dwPrintMode: 打印模式 0为Standard模式, 1为Fine模式
+        _shOrientation: 打印方向 1:纵向 2:横向
+        _shCopies: 打印份数
+        _hwnd: 窗口句柄 接收消息用
+        _dwApplyMatte: 是否应用雾面 0:不应用 1:应用
+
+    """
     bitmap = get_bmp_from_image(image_path)
     # bitmap = load_image_as_bitmap(image_path,_dwPaperType)
     JobProp=HITI_JOB_PROPERTY_RT()
@@ -104,13 +117,6 @@ def DoPrintJob(printer_name,image_path,_dwPaperType=0,_dwPrintMode=0,_shOrientat
     JobProp.shOrientation=_shOrientation
     JobProp.shCopies=_shCopies
     JobProp.dwPaperType=_dwPaperType
-    # # 创建窗口
-    # root = Tk()
-    # # 获取窗口句柄
-    # hWnd = ctypes.windll.user32.GetParent(root.winfo_id())
-    # JobProp.hParentWnd=hWnd
-
-    # JobProp.dwFlags=0x00000001
     JobProp.dwApplyMatte=_dwApplyMatte
     szPrinterName = create_unicode_buffer(printer_name)  
     dwError = dll.HITI_PrintOnePageW(szPrinterName,ctypes.byref(JobProp),ctypes.byref(bitmap))
