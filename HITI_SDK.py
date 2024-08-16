@@ -1,9 +1,10 @@
 import ctypes
 from ctypes import  c_void_p, c_wchar_p, sizeof, wintypes,windll, byref, create_unicode_buffer
+import threading
 import time
 from tkinter import Tk
 from config import cfg
-from dataModel import BITMAP, HITI_JOB_PROPERTY_RT
+from dataModel import BITMAP, HITI_DS, HITI_JOB_PROPERTY_RT
 from utility import  get_HITI_DS_name, get_bmp_from_image, get_ribbon_name
 
 
@@ -45,7 +46,7 @@ def HITI_CheckPrinterStatus(printer_name):
     result = dll.HITI_CheckPrinterStatusW(printer_name, ctypes.byref(status))
     status_name=get_HITI_DS_name(status.value)
     print(f"Printer {printer_name} status: {status_name}")
-    
+    return status.value
 
 def HITI_ApplyJobSetting(printer_name,JobProp):
     
@@ -95,7 +96,7 @@ def HITI_DoCommand(printer_name, command):
         return False
     
 
-def DoPrintJob(printer_name,image_path,_dwPaperType,_dwPrintMode,_shOrientation,_shCopies=1,_dwApplyMatte=0):
+def DoPrintJob(printer_name,image_path,_dwPaperType,_shOrientation,_shCopies=1,_dwPrintMode=0,_dwApplyMatte=0):
     """
     打印一张图片
     Args:
@@ -105,10 +106,31 @@ def DoPrintJob(printer_name,image_path,_dwPaperType,_dwPrintMode,_shOrientation,
         _dwPrintMode: 打印模式 0为Standard模式, 1为Fine模式
         _shOrientation: 打印方向 1:纵向 2:横向
         _shCopies: 打印份数
-        _hwnd: 窗口句柄 接收消息用
         _dwApplyMatte: 是否应用雾面 0:不应用 1:应用
-
+    Returns:
+        0: 打印完毕
     """
+    #检测打印机状态
+    dwError=HITI_CheckPrinterStatus(printer_name)
+    if dwError==HITI_DS.HITI_DS_OFFLINE.value:
+        print("打印机离线")
+        return HITI_DS.HITI_DS_OFFLINE.name
+
+    #检测打印机是否正在打印
+    dwError=HITI_DS.HITI_DS_BUSY.value
+    while dwError==HITI_DS.HITI_DS_BUSY.value:
+        dwError=HITI_CheckPrinterStatus(printer_name)
+        if dwError==HITI_DS.HITI_DS_OFFLINE.value:
+            print("打印机离线")
+            return HITI_DS.HITI_DS_OFFLINE.name
+        elif dwError==HITI_DS.HITI_DS_BUSY.value:
+            time.sleep(2)
+        elif dwError!=HITI_DS.HITI_DS_IDLE.value:
+            dwError_name=get_HITI_DS_name(dwError)
+            print(f"打印机状态异常,{dwError_name}")
+            return dwError_name
+
+    #开始打印
     bitmap = get_bmp_from_image(image_path)
     # bitmap = load_image_as_bitmap(image_path,_dwPaperType)
     JobProp=HITI_JOB_PROPERTY_RT()
@@ -118,10 +140,24 @@ def DoPrintJob(printer_name,image_path,_dwPaperType,_dwPrintMode,_shOrientation,
     JobProp.shCopies=_shCopies
     JobProp.dwPaperType=_dwPaperType
     JobProp.dwApplyMatte=_dwApplyMatte
+    # HITI_ApplyJobSetting(printer_name,JobProp)
     szPrinterName = create_unicode_buffer(printer_name)  
     dwError = dll.HITI_PrintOnePageW(szPrinterName,ctypes.byref(JobProp),ctypes.byref(bitmap))
-    print(f"Print job result: {dwError}")
-
+    if dwError!=HITI_DS.HITI_DS_IDLE.value:
+        dwError_name=get_HITI_DS_name(dwError)
+        print(f"打印机状态异常,{dwError_name}")
+        return dwError_name
+    
+    #检查打印是否完成
+    dwStatus = HITI_DS.HITI_DS_BUSY.value
+    while dwStatus != HITI_DS.HITI_DS_IDLE.value:
+        dwStatus = HITI_CheckPrinterStatus(printer_name)
+        if dwStatus == HITI_DS.HITI_DS_PRINTING.value:
+            time.sleep(3)
+        elif dwStatus==HITI_DS.HITI_DS_IDLE.value:
+            print("打印完成")
+        else:
+            return get_HITI_DS_name(dwStatus)
 
 
 
