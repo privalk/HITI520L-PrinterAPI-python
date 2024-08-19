@@ -2,7 +2,6 @@ from ctypes import Structure, c_long, c_ushort, c_void_p, c_void_p, c_short, c_l
 from ctypes.wintypes import DWORD, HWND, LONG, LPVOID
 from enum import Enum, IntEnum, IntFlag
 
-
 class BITMAP(Structure):
     _fields_ = [
         ("bmType", LONG),
@@ -69,9 +68,10 @@ class WM_HITI_PRINTER(IntEnum):
     MSG_JOB_CANCELED = 12
     MSG_JOB_PRINTED = 24
 
-from enum import Enum
+
 
 class HITI_DS(Enum):
+    HITI_DS_IDLE = 0x00000000  # Printer is idle
     HITI_DS_BUSY = 0x00080000  # Printer is busy
     HITI_DS_OFFLINE = 0x00000080  # Printer is disconnected or power off
     HITI_DS_PRINTING = 0x00000002  # Printer is printing
@@ -175,6 +175,22 @@ class HITI_PAPER_TYPE(IntEnum):
     HITI_PAPER_TYPE_5X7_SPLIT_2UP = 19
     HITI_PAPER_TYPE_4X6_SPLIT_3UP = 21
 
+class PAPER_SIZE(IntEnum):
+    PAPER_SIZE_6X4 = 520
+    PAPER_SIZE_6X8 = 521
+    PAPER_SIZE_5X7 = 523
+    PAPER_SIZE_6X8_SPLIT = 524
+    PAPER_SIZE_6X4_SPLIT_2UP = 525
+    PAPER_SIZE_5X7_2UP = 529
+    PAPER_SIZE_6X8_2UP = 530
+    PAPER_SIZE_6X8_FOR_6X4_2_SPILIT = 536
+    PAPER_SIZE_6X8_FOR_6X4_3_SPILIT = 537
+    PAPER_SIZE_6X6 = 532
+    PAPER_SIZE_5X5 = 618
+    PAPER_SIZE_6X5 = 554
+    PAPER_SIZE_6X4_COMBO_PRINT_3UP=527
+    
+
 class HITI_RIBBON_TYPE(IntEnum):
     HITI_RIBBON_TYPE_4X6 = 1
     HITI_RIBBON_TYPE_5X7 = 2
@@ -188,8 +204,6 @@ class HITI_FLAGS(IntFlag):
 
 class HITI_COMMAND(IntEnum):
     HITI_COMMAND_RESET_PRINTER = 100
-    HITI_COMMAND_LOCK_PRINTER = 101
-    HITI_COMMAND_UNLOCK_PRINTER = 102
     HITI_COMMAND_CUT_PAPER = 103
 
 class HITI_DEVINFO(IntEnum):
