@@ -1,5 +1,5 @@
 import time
-import HITI_SDK
+from . import HITI_SDK
 import win32print
 
 from dataModel import HITI_COMMAND, HITI_DEVINFO, HITI_DS, PAPER_SIZE

@@ -1,0 +1,5 @@
+{
+    "PRINTER_NAME": "HiTi P520L",
+    "DLL_PATH": "src\\PrinterAPI\\dllx64\\HTRTApi.dll"
+    
+}

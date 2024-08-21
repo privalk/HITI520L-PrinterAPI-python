@@ -4,7 +4,7 @@ import json
 class Config:
 
     def load_config(self):
-        with open('config.json', 'r') as config_file:
+        with open('src\PrinterAPI\config.json', 'r') as config_file:
             config = json.load(config_file)
         return config
     
