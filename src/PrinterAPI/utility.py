@@ -8,7 +8,7 @@ import win32print
 
 from dataModel import BITMAP, HITI_DS, RibbonType
 # 加载图片并转换为位图
-@staticmethod
+
 def get_bmp_from_imageo(image_path,paper_type,_shOrientation,for_first_half_page=True):
     # 设置不同纸张类型的宽度和高度
     if _shOrientation == 1:
@@ -114,7 +114,7 @@ def preview_bitmap(bitmap):
     plt.imshow(image_data)
     plt.axis('off')  # 不显示坐标轴
     plt.show()
-@staticmethod
+
 def print_printer_list():
     PRINTER_ENUM_LOCAL = 0x00000002
     printers = win32print.EnumPrinters(PRINTER_ENUM_LOCAL)
@@ -127,20 +127,20 @@ def print_printer_list():
 
         
 #输出dll函数
-@staticmethod
+
 def print_dll_functions(dll_path):
     pe = pefile.PE(dll_path)
     for exp in pe.DIRECTORY_ENTRY_EXPORT.symbols:
         print(hex(pe.OPTIONAL_HEADER.ImageBase + exp.address), exp.name.decode('utf-8'))
 
-@staticmethod
+
 def get_ribbon_name(value):
     for ribbon in RibbonType:
         if ribbon.value == value:
             return ribbon.name
     return None
 
-@staticmethod
+
 def get_HITI_DS_name(value):
     for hiti_ds in HITI_DS:
         if hiti_ds.value == value:
@@ -148,7 +148,7 @@ def get_HITI_DS_name(value):
     return None
 
 
-@staticmethod
+
 def str_to_BITMAP(bmp_bytes):
     # 将字符串解析为字典
     bmp_str = bmp_bytes.decode('utf-8')

@@ -74,7 +74,7 @@ def HITI_GetDeviceInfo(printer_name,info_type):
             remain_ribbon_count = ctypes.cast(info_data, ctypes.POINTER(wintypes.DWORD))[1]
             
             print(f"Ribbon Type: {get_ribbon_name(ribbon_type)},Remain Ribbon Count: {remain_ribbon_count}")
-            return (ribbon_type, remain_ribbon_count)
+            return (get_ribbon_name(ribbon_type), remain_ribbon_count)
         elif info_type == 5 or info_type == 6:  # DWORD类型
             result_data = ctypes.cast(info_data, ctypes.POINTER(wintypes.DWORD))[0]
             print(f"printed: {result_data}")
@@ -87,9 +87,9 @@ def HITI_DoCommand(printer_name, command):
     result = dll.HITI_DoCommandW(printer_name, command)
     if result == 0:
         print(f"命令执行成功，返回值: {result}")
-        return True
+        return result
     else:
         print(f"命令执行失败，错误码: {result}")
-        return False
+        return result
     
 

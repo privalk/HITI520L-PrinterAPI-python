@@ -1,3 +1,5 @@
+import io
+import subprocess
 import time
 from . import HITI_SDK
 import win32print
@@ -11,7 +13,7 @@ from PIL import Image, ImageWin
 
 import threading
 
-from config import cfg
+from .config import cfg
 
 class PrinterAPI:
     """
@@ -20,11 +22,11 @@ class PrinterAPI:
     printer_name=cfg['PRINTER_NAME']
 
     @staticmethod
-    def do_print(image_path,_shOrientation,_dwPaperType=PAPER_SIZE.PAPER_SIZE_6X4,_shCopies=1):
+    def do_print(image_bytes,_shOrientation,_dwPaperType=PAPER_SIZE.PAPER_SIZE_6X4,_shCopies=1):
         """
         打印图片
         Args:
-            image_path: 图片路径
+            image_bytes: 图片bytes
             _dwPaperType: 纸张类型 见PAPER_SIZE
             _shOrientation: 打印方向   1:纵向  2:横向 
             _shCopies: 打印份数
@@ -68,16 +70,41 @@ class PrinterAPI:
         printer_size = hDC.GetDeviceCaps(110), hDC.GetDeviceCaps(111)
 
         # 打开图像并调整大小
-        img = Image.open(image_path)
-        img = img.resize(printer_size, Image.LANCZOS)
-        
+        img = Image.open(io.BytesIO(image_bytes))
+
+        # 获取打印机的宽高
+        printer_width, printer_height = printer_size
+
+        # 获取图像的宽高
+        img_width, img_height = img.size
+
+        # 计算宽高比
+        img_aspect = img_width / img_height
+        printer_aspect = printer_width / printer_height
+
+        # 根据宽高比调整图像大小
+        if img_aspect > printer_aspect:
+            # 图像更宽，以打印机宽度为基准调整高度
+            new_width = printer_width
+            new_height = int(printer_width / img_aspect)
+        else:
+            # 图像更高，以打印机高度为基准调整宽度
+            new_width = int(printer_height * img_aspect)
+            new_height = printer_height
+
+        img = img.resize((new_width, new_height), Image.LANCZOS)
+
+        # 计算图像在打印页面上的居中位置
+        x_offset = (printer_width - new_width) // 2
+        y_offset = (printer_height - new_height) // 2
+
         # 启动打印作业
         hDC.StartDoc("Print Job")
         hDC.StartPage()
 
         # 将图像绘制到打印机设备上下文
         dib = ImageWin.Dib(img)
-        dib.draw(hDC.GetHandleOutput(), (0, 0, printer_size[0], printer_size[1]))
+        dib.draw(hDC.GetHandleOutput(), (x_offset, y_offset, x_offset + new_width, y_offset + new_height))
 
         # 结束页面和打印作业
         hDC.EndPage()
@@ -119,14 +146,19 @@ class PrinterAPI:
         thread.start()
         return thread
 
-
+    @staticmethod
+    def do_check_printer_status():
+        """
+        检查打印机状态
+        """
+        return HITI_SDK.HITI_CheckPrinterStatus(PrinterAPI.printer_name)
     @staticmethod
     def do_reset_printer():
         """
         重置打印机
 
         """
-        HITI_SDK.HITI_DoCommand(PrinterAPI.printer_name,HITI_COMMAND.HITI_COMMAND_RESET_PRINTER)
+        return HITI_SDK.HITI_DoCommand(PrinterAPI.printer_name,HITI_COMMAND.HITI_COMMAND_RESET_PRINTER)
     @staticmethod
     def do_cut_paper():
         """
@@ -138,10 +170,34 @@ class PrinterAPI:
         """
         获取纸张信息
         """
-        HITI_SDK.HITI_GetDeviceInfo(PrinterAPI.printer_name,HITI_DEVINFO.HITI_DEVINFO_RIBBON_INFO)
+        return HITI_SDK.HITI_GetDeviceInfo(PrinterAPI.printer_name,HITI_DEVINFO.HITI_DEVINFO_RIBBON_INFO)
     @staticmethod
     def get_print_count():
         """
         获取打印计数
         """
-        HITI_SDK.HITI_GetDeviceInfo(PrinterAPI.printer_name,HITI_DEVINFO.HITI_DEVINFO_PRINT_COUNT)
+        return HITI_SDK.HITI_GetDeviceInfo(PrinterAPI.printer_name,HITI_DEVINFO.HITI_DEVINFO_PRINT_COUNT)
+    @staticmethod
+    def do_print_test():
+        """
+        打印测试页并尝试验证是否成功
+        """
+        # 发送打印测试页命令
+        result = subprocess.run(["rundll32", "printui.dll", "PrintUIEntry", "/k", "/n", PrinterAPI.printer_name], capture_output=True, text=True)
+        
+        # 检查子进程的返回码
+        if result.returncode != 0:
+            print("Failed to send print command:", result.stderr)
+            return -1
+        
+        # 使用PowerShell检查打印队列
+        ps_command = f'Get-Printer | Where-Object {{ $_.Name -eq "{PrinterAPI.printer_name}" }} | Get-PrintJob'
+        check_result = subprocess.run(['powershell', '-Command', ps_command], capture_output=True, text=True)
+        
+        if "error" in check_result.stdout.lower() or check_result.returncode != 0:  # 检测错误信息或非零返回码
+            print("Printer queue error or no response:", check_result.stdout)
+            return -1
+        
+
+        print("Print command sent successfully.")
+        return 0
